@@ -6,10 +6,11 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from threading import Thread
 
-# --- KONFİQURASİYA (Hostinqdə Variables hissəsinə əlavə et) ---
-API_TOKEN = os.environ.get('BOT_TOKEN') # Sənin 8519... tokenin bura gələcək
-MY_CHAT_ID = os.environ.get('MY_CHAT_ID') # Sənin 7754... ID-n bura gələcək
-DOMAIN = os.environ.get('DOMAIN') # Railway-in sənə verdiyi https linki
+# --- BURA ÖZ MƏLUMATLARINI YAZ ---
+API_TOKEN = "8519435288:AAELasGOVqyYdR3EgqLLx2xNVsCwW7QY0r0"
+MY_CHAT_ID = "7754388468"
+# Railway-in sənə verdiyi linki bura yaz (axırda / olmasın)
+DOMAIN = "https://bot-production-da20.up.railway.app"
 
 bot = telebot.TeleBot(API_TOKEN)
 app = Flask(__name__)
